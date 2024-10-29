@@ -5,3 +5,5 @@
 
 bwa index $1/$2
 bwa mem $1/$2 $1/$4 $1/$5 > $1/sl_align.sam
+
+
