@@ -11,10 +11,10 @@ bwa index $2
 bwa mem $2 $3 $4 > sl_align.sam
 
 grep "^[ill]" sl_align.sam |
-awk '{print $1 "." NR%2, $3, $4, $4 + length($10)}' |
+awk '{print $1 "." NR%2, $3, $4, $4 + length($10), $10}' |
 sort -k2,2 -k3,3 -k4,4 > sl_raw_align.txt
 
-awk '{count[$2]++} END {for (num in count) print num, count[num]}' sl_raw_align.sam > freq.txt
+awk '{count[$2]++} END {for (num in count) print num, count[num]}' sl_raw_align.txt > freq.txt
 
 
 
