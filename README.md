@@ -10,3 +10,6 @@ The goal of this project is to re implement the methodology presented in the pap
 
 - zlib.h
 ```sudo apt-get install zlib1g-dev```
+
+- samtools
+```sudo apt install samtools```
