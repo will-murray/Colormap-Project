@@ -50,6 +50,7 @@ def build_long_read_graph(D):
     found = 0
     # brute force (for now)
     for i in D:
+        edges = []
         for j in D:
             self_edge =   i[0] == j[0]
             i_before_j =  int(i[2]) <= int(j[2]) and int(i[3]) < int(j[3])
@@ -98,7 +99,7 @@ def build_graphs(fname):
     
             
 B = compute_break_points(freq_file)
-MIN_OVERLAP = 25
+MIN_OVERLAP = 10
 
 t0 = time.time()
 build_graphs(data_file)
