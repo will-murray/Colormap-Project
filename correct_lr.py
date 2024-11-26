@@ -20,8 +20,16 @@ def visualize_nx_graph(G : nx.Graph, name = "default"):
     converts a nx.Graph object into a graphviz dot object, and produces a jpg titled with name
     """
     A = gv.Digraph(name)
+
+    for n,data in G.nodes(data = True):
+        if G.degree(n) > 0:
+            lab = str(data.get('label',n))+ " | " + str(data.get('value', n)) # Use 'label' attribute if available, otherwise use node ID
+            A.node(str(n), label=lab)
+
     for e in G.edges(data=True):
         A.edge(e[0], e[1],label=str(e[2]['weight']))
+    
+
         
 
     A.render(filename=name, format="png", cleanup=True)
@@ -81,8 +89,6 @@ def build_long_read_graph(D, verbose = False) -> nx.Graph:
     lr_name = D[0,1]
     if lr_name == "*":
         return nx.Graph()
-    
-    print(D)
 
     G = nx.Graph()
     for i in D:
@@ -138,32 +144,19 @@ def SP_correction(G : nx.Graph,D, lr_name):
     2. replace base pairs in the long read with the reads that form shortest paths
     """
     if len(G.edges) > 20:
+            visualize_nx_graph(G)
             for comp in list(nx.connected_components(G)):
                 if len(comp) > 1:
-                    C = [(node, G.nodes[node]['value']) for node in comp]
-                    source = min(C)[0]
-                    dest =   max(C)[0]
+                    C = [(node, int(G.nodes[node]['value'])) for node in comp]
+                    source = min(C, key=lambda x: x[1])[0]
+                    dest = max(C, key=lambda x: x[1])[0]
+                    s_val = G.nodes[source].get('value')
+                    d_val = G.nodes[dest].get('value')
+
                     if source != dest:
                         SP = nx.dijkstra_path(G, source, dest)
-                        seq = ""
-                        pos = 0
-                        for i in range(len(SP) - 1):
-                            e1 = D[D[:,0] == SP[i]][0]
-                            e2 = D[D[:,0] == SP[i+1]][0]
-    
-
-                            if i == 0:
-                            #     print(f"appended from e1 using range [{e1[2]} -> {int(e1[2]) +len(e1[4])}]")
-                            #     seq += e1[4]
-                            #     pos = int(e1[2]) + len(e1[4])
-                                print(f"[{e1[2]}, {int(e1[2]) + len(e1[4])}] -> ")
-                            print(f"[{e2[2]}, {int(e2[2]) + len(e2[4])}] -> ")
-
-                            # print(f"need to append to seq from node e2 starting from absolute position {pos}")
-                            # print(f"pos = {pos} | e2 range = [{e2[2]} , {int(e2[2]) + len(e2[4])}] | e2 length = {len(e2[4])}")
-                            # print(f"pos - e2 start = {pos - int(e2[2])}")
-                        print("#\n")
-        
+                        
+                        
             exit()
 
 
