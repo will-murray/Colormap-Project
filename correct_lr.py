@@ -3,6 +3,7 @@ import re
 import numpy as np
 import time
 import networkx as nx
+import graphviz as gv
 
 
 if len(sys.argv) == 1: #test mode
@@ -13,6 +14,18 @@ else:
     freq_file = sys.argv[1] #file containing the number of short reads mapped to each long read
     data_file = sys.argv[2] #file containing |short read name| long read name | alignment left end| alignment right end|
     lr_file = sys.argv[3] #long read file
+
+def visualize_nx_graph(G : nx.Graph, name = "default"):
+    """
+    converts a nx.Graph object into a graphviz dot object, and produces a jpg titled with name
+    """
+    A = gv.Digraph(name)
+    for e in G.edges(data=True):
+        A.edge(e[0], e[1],label=str(e[2]['weight']))
+        
+
+    A.render(filename=name, format="png", cleanup=True)
+    
 
 
 def levenshteinDistance(s1, s2):
@@ -41,7 +54,6 @@ def get_lr_dict(fname):
     
     return D
 
-
 def compute_break_points(fname):
     T = []
     with open(fname,"r") as file:
@@ -60,12 +72,7 @@ def compute_break_points(fname):
 
     return B
 
-
-    
-
-
-
-def build_long_read_graph(D, verbose = False):
+def build_long_read_graph(D, verbose = False) -> nx.Graph:
     """
     builds the graph as an adjanceny matrix for a particular long read
     Input D: A numpy 2d array whose rows are the short reads mapped to the long read with name lr_name
@@ -73,18 +80,21 @@ def build_long_read_graph(D, verbose = False):
 
     lr_name = D[0,1]
     if lr_name == "*":
-        return None
+        return nx.Graph()
     
+    print(D)
+
     G = nx.Graph()
-    G.add_nodes_from([i[0] for i in D])
+    for i in D:
+        G.add_node(i[0], value = i[2])
 
     print("-------------\n",lr_name) if verbose else 0
 
     candidates = 0
     found = 0
     # brute force (for now)
-    for i in D:
-        for j in D:
+    for idx,i in enumerate(D):
+        for j in D[idx:]:
             self_edge =   i[0] == j[0]
             i_before_j =  int(i[2]) <= int(j[2]) and int(i[3]) < int(j[3])
             overlapping = int(j[2]) <= int(i[3]) - MIN_OVERLAP + 1
@@ -97,8 +107,13 @@ def build_long_read_graph(D, verbose = False):
 
                 if( i[4][A[0]:A[1]] == j[4][B[0]:B[1]]):
                     w = levenshteinDistance(j[4][B[1]:], LR[lr_name][int(j[2]) + B[1] : int(j[2]) + B[1] + len(j[4][B[1]:])])
-                    G.add_edge(i[0], j[0],weight= w)
-                               
+                    G.add_edge(i[0], j[0],weight= w, I = (int(i[2]),I[0]) )
+                    # edge weight is the defined in the paper
+                    # I stores:
+                    #   1. the left endpoint of read i,
+                    #   2. the start of the overlap between i and j
+                    #   3. the right endpoint of read j
+                    # I is used to construct a sequence of short reads which replaces a section of the long read
                     if verbose:
                         print(f"***********\n{i[0]} <-> {j[0]}")
                         print(f"{i[4][:A[0]].lower()}{i[4][A[0]:A[1]]} <-> {j[4][B[0]:B[1]]}{j[4][B[1]:].lower()}\n")
@@ -110,9 +125,48 @@ def build_long_read_graph(D, verbose = False):
                     found += 1
 
     
+    
     return G
 
     
+def SP_correction(G : nx.Graph,D, lr_name):
+    """
+    Given a networkx graph and the name of the long read:
+    1. compute the shortest s-d path of each connected component
+        s = the leftmost mapped node
+        d = the rightmost mapped node
+    2. replace base pairs in the long read with the reads that form shortest paths
+    """
+    if len(G.edges) > 20:
+            for comp in list(nx.connected_components(G)):
+                if len(comp) > 1:
+                    C = [(node, G.nodes[node]['value']) for node in comp]
+                    source = min(C)[0]
+                    dest =   max(C)[0]
+                    if source != dest:
+                        SP = nx.dijkstra_path(G, source, dest)
+                        seq = ""
+                        pos = 0
+                        for i in range(len(SP) - 1):
+                            e1 = D[D[:,0] == SP[i]][0]
+                            e2 = D[D[:,0] == SP[i+1]][0]
+    
+
+                            if i == 0:
+                            #     print(f"appended from e1 using range [{e1[2]} -> {int(e1[2]) +len(e1[4])}]")
+                            #     seq += e1[4]
+                            #     pos = int(e1[2]) + len(e1[4])
+                                print(f"[{e1[2]}, {int(e1[2]) + len(e1[4])}] -> ")
+                            print(f"[{e2[2]}, {int(e2[2]) + len(e2[4])}] -> ")
+
+                            # print(f"need to append to seq from node e2 starting from absolute position {pos}")
+                            # print(f"pos = {pos} | e2 range = [{e2[2]} , {int(e2[2]) + len(e2[4])}] | e2 length = {len(e2[4])}")
+                            # print(f"pos - e2 start = {pos - int(e2[2])}")
+                        print("#\n")
+        
+            exit()
+
+
 
 def build_graphs(fname):
     """
@@ -129,13 +183,9 @@ def build_graphs(fname):
     for D in partitions:
         print(f"{(i / len(partitions)) * 100}%")
         G = build_long_read_graph(D, verbose=False)
-        print(G)
-        
+        SP_correction(G,D, lr_name=D[0,1])
 
         i+=1
-
-        if i == 4:
-            exit()
 
 
     
