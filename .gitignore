@@ -1,2 +1,4 @@
 Methodology/
-datasets/SRR2063112.fastq
+ecoli_data/SRR2063112.fasta
+ecoli_data/ERR022075.fastq
+ecoli_data/lr_len_data.txt
