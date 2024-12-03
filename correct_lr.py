@@ -155,6 +155,29 @@ def SP_correction(G : nx.Graph,D, lr_name):
 
                     if source != dest:
                         SP = nx.dijkstra_path(G, source, dest)
+
+                        s = ""  # String to hold the corrected long read formed by SP
+                        O = []  # Overlaps between sequences
+
+                        # Compute overlaps based on edges in SP
+                        for idx in range(len(SP) - 1):
+                            I = G.get_edge_data(SP[idx], SP[idx + 1])['I']
+                            O.append(I[1] - I[0])
+
+
+                        
+
+                        
+                        
+                        
+                        print(f"{source} : {dest}")
+                        print(f"{len(s)} | [{s_val}, {int(d_val)}]")                                    
+                                            
+            
+                                
+                                
+                        print("-------")
+
                         
                         
             exit()
@@ -185,7 +208,7 @@ def build_graphs(fname):
             
 B = compute_break_points(freq_file)
 LR = get_lr_dict(lr_file)
-MIN_OVERLAP = 10
+MIN_OVERLAP = 5
 
 t0 = time.time()
 build_graphs(data_file)
