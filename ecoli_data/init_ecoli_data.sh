@@ -4,10 +4,6 @@
 # - Illumina short reads: https://www.ncbi.nlm.nih.gov/Traces/index.html?view=run_browser&page_size=10&acc=ERR022075&display=metadata
 
 
-
-
-
-
 if [ ! -f SRR2063112.fasta ]; then
     echo "extracting SRR2063112 (long) with fastq-dump..."
     fastq-dump SRR2063112 
@@ -17,8 +13,9 @@ if [ ! -f SRR2063112.fasta ]; then
 fi
 
 
-if [ ! -f ERR022075.fastq ]; then
+if [ ! -f ERR022075_1.fastq ]; then
     echo "extracting ERR022075 (short reads) with fasterq-dump..."
-    fastq-dump ERR022075 # Illumina short reads
+    fastq-dump --split-files ERR022075 # Illumina short reads
 fi
+
 

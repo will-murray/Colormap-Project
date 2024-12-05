@@ -143,46 +143,25 @@ def SP_correction(G : nx.Graph,D, lr_name):
         d = the rightmost mapped node
     2. replace base pairs in the long read with the reads that form shortest paths
     """
-    if len(G.edges) > 20:
-            visualize_nx_graph(G)
-            for comp in list(nx.connected_components(G)):
-                if len(comp) > 1:
-                    C = [(node, int(G.nodes[node]['value'])) for node in comp]
-                    source = min(C, key=lambda x: x[1])[0]
-                    dest = max(C, key=lambda x: x[1])[0]
-                    s_val = G.nodes[source].get('value')
-                    d_val = G.nodes[dest].get('value')
+    if lr_name == "*":
+        return
+    # D = D[np.isin(D[:, 1], lr_name)]
+    for comp in list(nx.connected_components(G)):
+        if len(comp) > 1:
+            C = [(node, int(G.nodes[node]['value'])) for node in comp]
+            source = min(C, key=lambda x: x[1])[0]
+            dest = max(C, key=lambda x: x[1])[0]
 
-                    if source != dest:
-                        SP = nx.dijkstra_path(G, source, dest)
-
-                        s = ""  # String to hold the corrected long read formed by SP
-                        O = []  # Overlaps between sequences
-
-                        # Compute overlaps based on edges in SP
-                        for idx in range(len(SP) - 1):
-                            I = G.get_edge_data(SP[idx], SP[idx + 1])['I']
-                            O.append(I[1] - I[0])
-
-
-                        
-
-                        
-                        
-                        
-                        print(f"{source} : {dest}")
-                        print(f"{len(s)} | [{s_val}, {int(d_val)}]")                                    
-                                            
-            
-                                
-                                
-                        print("-------")
-
-                        
-                        
-            exit()
-
-
+            if source != dest:
+                SP = nx.dijkstra_path(G, source, dest)
+                nodes = D[np.isin(D[:, 0], SP)] 
+                concatenated_seq = nodes[0, 4]  
+    
+                for i in range(len(nodes) - 1):
+                    offset = int(nodes[i, 3]) - int(nodes[i+1,2])
+                    current_seq = nodes[i+1, 4][offset:]  
+                    concatenated_seq += current_seq  
+                            
 
 def build_graphs(fname):
     """
@@ -199,16 +178,23 @@ def build_graphs(fname):
     for D in partitions:
         print(f"{(i / len(partitions)) * 100}%")
         G = build_long_read_graph(D, verbose=False)
-        SP_correction(G,D, lr_name=D[0,1])
-
+        # SP_correction(G,D, lr_name=D[0,1])
         i+=1
 
 
-    
-            
+if len(sys.argv) == 1: #test mode
+    freq_file = "test_data/freq.txt"
+    data_file = "test_data/sl_raw_align.txt"
+    lr_file = "test_data/pac.fasta"
+else:
+    freq_file = sys.argv[1] #file containing the number of short reads mapped to each long read
+    data_file = sys.argv[2] #file containing |short read name| long read name | alignment left end| alignment right end|
+    lr_file = sys.argv[3] #long read file
+
+
 B = compute_break_points(freq_file)
 LR = get_lr_dict(lr_file)
-MIN_OVERLAP = 5
+MIN_OVERLAP = 10
 
 t0 = time.time()
 build_graphs(data_file)
