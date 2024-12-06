@@ -81,30 +81,6 @@ def compute_break_points(fname):
     return B
 
 
-def faster_graph_build(D,verbose = False):
-
-    lr_name = D[0,1]
-    if lr_name == "*":
-        return nx.Graph()
-
-    G = nx.Graph()
-    for i in D:
-        G.add_node(i[0], value = i[2])
-
-    print("-------------\n",lr_name) if verbose else 0
-
-    D = [(i,j) for i in D for j in D if (i[0] != j[0]) and ( int(i[2]) <= int(j[2]) and int(i[3]) < int(j[3])) and int(j[2]) <= int(i[3]) - MIN_OVERLAP + 1]
-    for pair in D:
-        I = [int(pair[1][2]), int(i[3])] #overlapping interval
-        A = [I[0]-int(i[2]) , I[1] -int(i[2])]
-        B = [I[0]-int(pair[1][2]) , I[1] -int(pair[1][2])]
-
-        if( pair[0][4][A[0]:A[1]] == pair[1][4][B[0]:B[1]]):
-            w = levenshteinDistance(pair[1][4][B[1]:], LR[lr_name][int(pair[1][2]) + B[1] : int(pair[1][2]) + B[1] + len(pair[1][4][B[1]:])])
-            G.add_edge(pair[0][0], pair[1][0],weight= w, I = (int(pair[0][2]),I[0]) )
-
-    return G
-
 def build_long_read_graph(D, verbose = False) -> nx.Graph:
     """
     builds the graph as an adjanceny matrix for a particular long read
@@ -199,13 +175,17 @@ def build_graphs(fname):
     
     #group the short read data based on the which long read its mapped to
     partitions = [data[start:end] for start,end in B]
-    i = 0
+    lines_parsed = 0
+    mark = 5000
     for D in partitions:
-        print(f"{(i / len(partitions)) * 100}%")
-        G1 = faster_graph_build(D, verbose=False)
+        
+        G = build_long_read_graph(D, verbose=False)
+        lines_parsed += D.shape[0]
+        if lines_parsed >= mark:
+            print(f"parsed {lines_parsed} lines")
+            mark += 5000
         
         
-        i+=1
 
 
 if len(sys.argv) == 1: #test mode
