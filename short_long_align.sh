@@ -14,6 +14,10 @@ bwa mem -t 8 -aY -A 5 -B 11 -O 2,1 -E 4,3 -k 8 -W 16 -w 40 -r1 -D 0 -y 20 -L 30,
 
 grep "^[ill]" sl_align.sam |
 awk '{print $1 "." NR%2, $3, $4, $4 + length($10), $10}' |
-sort -k2,2 -k3,3 -k4,4 > sl_raw_align.txt
+sort -k2,2 -k3,3 -k4,4 | awk '$5 != "*" {print}' > sl_raw_align.txt
+
+
+
+
 
 awk '{count[$2]++} END {for (num in count) print num, count[num]}' sl_raw_align.txt | sort -k1,1 > freq.txt
