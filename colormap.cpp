@@ -19,7 +19,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "SRR10971019.89";
+const string EXAMPLE_LR = "SRR10971019.1013";
 const int MINOVERLAP = 10;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
@@ -199,7 +199,6 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     }
 
     if(lr_name == EXAMPLE_LR){
-        cout << "!!!" << endl;
         write_graph_to_dot(G ,vertex_map,"graph.dot");
     }
 
@@ -396,7 +395,7 @@ void correct_long_reads(
         if (record.pac != currentPac) {
             if (!currentChunk.empty()) {
                 string lr_seq = LR_MAP.at(currentPac);
-                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq, true);
+                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq, false);
                 string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq, false);
                 corr_reads_fname << ">" + currentPac << "\n";
                 corr_reads_fname << corrected_read << "\n";
@@ -411,7 +410,7 @@ void correct_long_reads(
 
         count ++;
         if(count >= mark){
-            cout << "parsed "<< mark << " lines" <<endl;
+            cout <<"[ "<<__FILE__ << " ]" <<"\tparsed "<< mark << " lines" <<endl;
             mark +=chunk_size;
         }
     }
@@ -485,19 +484,18 @@ int main(int argc, char* argv[]) {
         cout << "Usage: ./build_graph <long_reads>.fasta <sl_raw_align.txt>"<< endl;
         exit(1);
     }
-    cout << "Preprocessing [parseFasta]...." << endl;
+    cout <<"[ "<< __FILE__ <<" ] Preprocessing" << endl;
     std::unordered_map<std::string, std::string> LR_MAP = parseFasta(argv[1]);
 
 
-    cout << "Building Graphs...." << endl;
+    cout <<"[ " <<__FILE__ <<" ] Building Graphs" << endl;
     correct_long_reads(argv[2],argv[1], LR_MAP);
 
-    cout << "total components " <<total_components <<endl;
-    cout << "bad components "<<bad_components<<" | " << 100* (bad_components/total_components)<< "%"<<endl;
-    cout << "twice aligned short reads "<<twice_aligned_short_reads<<" | " << 100* (twice_aligned_short_reads/total_components)<< "%"<<endl;
+    cout <<"[ "<< __FILE__ <<" ] total components " <<total_components <<endl;
+    cout <<"[ "<< __FILE__ <<" ] bad components "<<bad_components<<" | " << 100* (bad_components/total_components)<< "%"<<endl;
+    cout <<"[ "<< __FILE__ <<" ] twice aligned short reads "<<twice_aligned_short_reads<<" | " << 100* (twice_aligned_short_reads/total_components)<< "%"<<endl;
 
 
-    string str1 = "Hello Geeks";
     
     return 0;
 }
