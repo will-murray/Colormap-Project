@@ -25,7 +25,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "SRR10971019.1013";
+const string EXAMPLE_LR = "pac_100";
 const int MINOVERLAP = 10;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
