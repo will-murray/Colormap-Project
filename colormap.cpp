@@ -25,11 +25,14 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "pac_100";
+const string EXAMPLE_LR = "SRR10971019.271";
 const int MINOVERLAP = 10;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
+
+int max_edges = 0;
+string most_active_long_read;
 
 using Graph = adjacency_list<
         vecS,                                    // Edge container (std::vector for adjacency list)
@@ -144,7 +147,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     
     ) {
 
-
+    int edge_count = 0;
     const int N = chunk.size();
     int lr_len = lr_seq.length();
 
@@ -178,6 +181,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
                     int w = levenshteinDistance(j_overhang, lr_subseq);
 
                     add_edge(vertex_map[i.id], vertex_map[j.id], property<edge_weight_t, int>(w), G);
+                    edge_count++;
 
                     if(verbose && lr_name == EXAMPLE_LR){
                         
@@ -203,8 +207,9 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
             }
         }
     }
-
-    if(lr_name == EXAMPLE_LR){
+    if(edge_count > max_edges){
+        cout <<"new champ: " << lr_name<<endl;
+        most_active_long_read = lr_name;
         write_graph_to_dot(G ,vertex_map,"graph.dot");
     }
 

@@ -18,8 +18,8 @@ SPLIT_FILES=true
 # rm "${OUTPUT_DIR}${SRA_ID_LONG}.fastq"
 
 
-# echo "Extracting ${SRA_ID_SHORT} (short reads) with fasterq-dump..."
-#     fastq-dump --split-files "${SRA_ID_SHORT}"
+echo "Extracting ${SRA_ID_SHORT} (short reads) with fasterq-dump..."
+    fastq-dump --split-files "${SRA_ID_SHORT}"
 
 
 

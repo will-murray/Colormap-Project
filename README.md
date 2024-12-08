@@ -2,7 +2,7 @@
 The goal of this project is to re implement the methodology presented in the paper "CoLoRMap: Correcting Long Reads by Mapping short reads" by Ehsan Haghshenas, Faraz Hach, S. Cenk Sahinalp and Cedric Chauve
 
 
-# Dependancies
+# Dependencies
 
 - Entrez Direct: used for downloading reference sequence NC 000913  
     ```apt install ncbi-entrez-direct```
@@ -20,4 +20,22 @@ The goal of this project is to re implement the methodology presented in the pap
 
 # Usage
 
-working on this section
+## Snakemake pipeline
+
+A folder with 4 files
+1. ```<short reads 1>.fastq```
+2. ```<short_reads_1>.fastq```
+3. ```<long reads>.fasta```
+3. ```<reference genome>.fasta```
+
+parameterizes the Snakefile. These values can be specified in the snakefile.
+
+
+## ```colormap.cpp```
+This file can be used directly to correct long reads. It takes 2 command line arguments:
+1. ```<long_reads>.fasta```  
+this is just the relative path to the long reads which are 
+2. a "raw alignment file"
+
+
+
