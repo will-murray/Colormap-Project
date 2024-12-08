@@ -1,5 +1,6 @@
 .vscode/
 
+blasr/og.sam
 ecoli_data/freq.txt
 ecoli_data/sl_align.sam
 ecoli_data/sl_raw_align.txt

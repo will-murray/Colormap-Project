@@ -1,3 +1,9 @@
+/*
+
+    this code was written in ~72 hours, so I apologize for its sloppyness
+
+*/
+
 #include <iostream>
 #include <fstream>
 #include <unordered_map>

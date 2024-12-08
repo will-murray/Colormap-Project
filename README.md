@@ -4,15 +4,20 @@ The goal of this project is to re implement the methodology presented in the pap
 
 # Dependancies
 
-- Entrez Direct: used for downloading reference sequences NC 000913, NC 001224, NT 0337{77-79}, NC 0043{53-54}, NC 0245{11-12}, NT 037436 install with ```apt install ncbi-entrez-direct```
+- Entrez Direct: used for downloading reference sequence NC 000913  
+    ```apt install ncbi-entrez-direct```
 
-- BWA
+- BWA - see here for installation : https://github.com/lh3/bwa. This code base expects it to be in ```$PATH```  
 
-- zlib.h
+- zlib.h  
 ```apt-get install zlib1g-dev```
 
-- samtools
+- samtools  
 ```apt install samtools```
 
-- networkX
-implements dijkstras algo ```apt install python3-networkx```
+- Boost: C++ library used in the codebase to for store graphs,find connected components,run dijstra's shortest path etc.  
+```sudo apt-get install libboost-graph-dev```
+
+# Usage
+
+working on this section
