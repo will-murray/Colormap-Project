@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <string>
+#include <regex>
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -18,7 +19,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "pac_1";
+const string EXAMPLE_LR = "SRR10971019.89";
 const int MINOVERLAP = 10;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
@@ -43,6 +44,7 @@ struct Record {
     int end;
     std::string sequence;
 };
+
 
 void print_record(Record r, bool print_seq = false){
     cout <<"id =" << r.id << " | start = " << r.start << " | end =" << r.end;
@@ -136,6 +138,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     
     ) {
 
+
     const int N = chunk.size();
     int lr_len = lr_seq.length();
 
@@ -150,7 +153,6 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
 
 
     for(auto& i: chunk){
-        
         for(auto& j: chunk){
             if( (i.id != j.id) && (i.start <= j.start && i.end < j.end) && (j.start <= i.end - MINOVERLAP + 1 ) && (j.end <= lr_len) ){
                 std::vector<int> I = {j.start, i.end};
@@ -161,16 +163,18 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
                 std::string sub_i = i.sequence.substr(A[0], A[1]);
                 std::string sub_j = j.sequence.substr(B[0], B[1]); 
                 
+                
                 if (sub_i == sub_j) {
 
+                    
                     string j_overhang = j.sequence.substr(B[1], j.sequence.length() - B[1]); //portion of j's sequence which is not part of the overlap
                     string lr_subseq = lr_seq.substr(i.end, j_overhang.length());
                     int w = levenshteinDistance(j_overhang, lr_subseq);
 
                     add_edge(vertex_map[i.id], vertex_map[j.id], property<edge_weight_t, int>(w), G);
 
-                    if(verbose){
-
+                    if(verbose && lr_name == EXAMPLE_LR){
+                        
                         cout << "++++++++++++++++++++++++++++++++++\n" <<endl;
                         print_record(i,true);
                         print_record(j,true);
@@ -184,7 +188,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
                         cout <<"leven = " <<w<<endl;
                         cout << "\n\n";
 
-                        cout << "LR:\n"<<lr_seq;
+                        
                     }
 
                 }
@@ -195,6 +199,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     }
 
     if(lr_name == EXAMPLE_LR){
+        cout << "!!!" << endl;
         write_graph_to_dot(G ,vertex_map,"graph.dot");
     }
 
@@ -210,10 +215,13 @@ string correct_read(
     std::map<string, graph_traits<Graph>::vertex_descriptor> vertex_map,
     std::vector<Record>& chunk,
     const string& lr_name,
-    const string& lr_seq,
+    string& lr_seq,
     bool verbose = false
     
     ) {
+
+    //make a copy of the long read
+    string lr_seq_copy = lr_seq;
 
     //map the vertex id (int) to the vertex name (string) found in the data 
     std::map<graph_traits<Graph>::vertex_descriptor, std::string> r_vertex_map;
@@ -285,7 +293,7 @@ string correct_read(
         bool bad_component = false;
         for(int i = 0; i < l - 1; i++){
             int offset = subset[i].end - subset[i+1].start;
-            if(offset >= 100){
+            if(offset >= subset[i].sequence.length()){
                 /*
                 uncanny
                 id =ill.2608.0 | start = 1006 | end =1106 | seq =  CTGACGTTCACGCTTACGTCCACACGGCATTCGGCAGATATTCCGCCGTATACGTTTGCCAGCGATGTGCAGGTTATGGTGATTAAGAAACAGGCGCTGG
@@ -300,7 +308,14 @@ string correct_read(
     
         }
 
-        if(lr_name == EXAMPLE_LR and verbose){
+        int start = static_cast<size_t>(subset[0].start);
+        int s_len = s.length();
+        for(int i = 0;i < s_len; i ++ ){
+            lr_seq.at(start + i) = tolower(s.at(i));
+        }
+
+
+            if(lr_name == EXAMPLE_LR and verbose){
                 
 
                 // Output the shortest distance and the path for the current component
@@ -313,6 +328,8 @@ string correct_read(
                 }
 
                 cout << "\ts = "<<s<<endl;
+                cout << "start = "<<start<<endl;
+                cout << "len = "<<s_len<<endl;
 
                 cout << "_____________________________\n\n\n" << endl;
                 
@@ -324,16 +341,37 @@ string correct_read(
 
             }
         }
+    
+    for(int i=0;i<lr_seq.length();i++){
+        if(lr_seq[i] != lr_seq_copy[i]){
+            lr_seq[i] = tolower(lr_seq[i]);
+        }
+    }
 
-    return ""; 
+    return lr_seq; 
 
     }
 
-void correct_long_reads(const std::string& filepath,const std::unordered_map<std::string, std::string> LR_MAP) {
-    std::ifstream file(filepath);
+void correct_long_reads(
+
+    const std::string& alignment_filepath,
+    const std::string& fasta_filepath,
+    const std::unordered_map<std::string, std::string> LR_MAP) 
+    
+    {
+
+    std::ifstream file(alignment_filepath);
+    size_t dot_pos = fasta_filepath.find_last_of('.');
+    std::string out_filepath = fasta_filepath.substr(0, dot_pos) + "_corr" + fasta_filepath.substr(dot_pos); 
+    std::ofstream corr_reads_fname(out_filepath);
+
+    if (!corr_reads_fname.is_open()) {
+        std::cerr << "Error: Could not open the file " << out_filepath << " for writing." << std::endl;
+        return;
+    }
 
     if (!file.is_open()) {
-        std::cerr << "Error: Unable to open file " << filepath << std::endl;
+        std::cerr << "Error: Unable to open file " << alignment_filepath << std::endl;
         return;
     }
     
@@ -341,7 +379,8 @@ void correct_long_reads(const std::string& filepath,const std::unordered_map<std
     std::string line;
     std::string currentPac = "";
     std::vector<Record> currentChunk;
-    int mark = 5000;
+    int chunk_size = 2500;
+    int mark = 2500;
     int count = 0;
     while (std::getline(file, line)) {
         
@@ -357,8 +396,11 @@ void correct_long_reads(const std::string& filepath,const std::unordered_map<std
         if (record.pac != currentPac) {
             if (!currentChunk.empty()) {
                 string lr_seq = LR_MAP.at(currentPac);
-                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq);
-                string s = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq);
+                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq, true);
+                string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq, false);
+                corr_reads_fname << ">" + currentPac << "\n";
+                corr_reads_fname << corrected_read << "\n";
+                corr_reads_fname << LR_MAP.at(currentPac) << "\n";
                 
 
             }
@@ -370,7 +412,7 @@ void correct_long_reads(const std::string& filepath,const std::unordered_map<std
         count ++;
         if(count >= mark){
             cout << "parsed "<< mark << " lines" <<endl;
-            mark +=5000;
+            mark +=chunk_size;
         }
     }
 
@@ -390,6 +432,8 @@ void correct_long_reads(const std::string& filepath,const std::unordered_map<std
 std::unordered_map<std::string, std::string> parseFasta(const std::string& filepath) {
     std::unordered_map<std::string, std::string> fastaDict;
     std::ifstream fastaFile(filepath);
+
+
     if (!fastaFile.is_open()) {
         std::cerr << "Error: Unable to open file " << filepath << std::endl;
         return fastaDict;
@@ -404,8 +448,19 @@ std::unordered_map<std::string, std::string> parseFasta(const std::string& filep
             if (!readName.empty()) {
                 fastaDict[readName] = sequence;
             }
+            std::smatch match;
             readName = line.substr(1); // Remove '>'
-            sequence.clear();         // Reset sequence for the new read
+            int i = 0;
+            for(char ch : readName){
+                if(ch == ' '){
+                    readName = readName.substr(0,i);
+                    break;
+                }
+                i++;
+            }
+            
+            sequence.clear();    
+            
         } else {
             sequence += line; // Append the sequence line
         }
@@ -430,12 +485,22 @@ int main(int argc, char* argv[]) {
         cout << "Usage: ./build_graph <long_reads>.fasta <sl_raw_align.txt>"<< endl;
         exit(1);
     }
-    cout << "Building Graphs...." << endl;
+    cout << "Preprocessing [parseFasta]...." << endl;
     std::unordered_map<std::string, std::string> LR_MAP = parseFasta(argv[1]);
-    correct_long_reads(argv[2] , LR_MAP);
+
+
+    cout << "Building Graphs...." << endl;
+    correct_long_reads(argv[2],argv[1], LR_MAP);
 
     cout << "total components " <<total_components <<endl;
     cout << "bad components "<<bad_components<<" | " << 100* (bad_components/total_components)<< "%"<<endl;
     cout << "twice aligned short reads "<<twice_aligned_short_reads<<" | " << 100* (twice_aligned_short_reads/total_components)<< "%"<<endl;
+
+
+    string str1 = "Hello Geeks";
+    
     return 0;
 }
+
+// ./build_graphs ecoli_data/SRR10971019_sub.fasta ecoli_data/sl_raw_align.txt
+// ./build_graphs test_data/pac.fasta test_data/sl_raw_align.txt
