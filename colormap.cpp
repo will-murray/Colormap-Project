@@ -25,14 +25,17 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "SRR10971019.271";
-const int MINOVERLAP = 10;
+const string EXAMPLE_LR = "SRR10971019.1";
+const int MINOVERLAP = 5;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
 
 int max_edges = 0;
 string most_active_long_read;
+
+
+
 
 using Graph = adjacency_list<
         vecS,                                    // Edge container (std::vector for adjacency list)
@@ -208,9 +211,10 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
         }
     }
     if(edge_count > max_edges){
-        cout <<"new champ: " << lr_name<<endl;
+        // cout <<"new champ: " << lr_name<<endl;
         most_active_long_read = lr_name;
         write_graph_to_dot(G ,vertex_map,"graph.dot");
+        max_edges= edge_count;
     }
 
     return std::make_tuple(G,vertex_map);
@@ -249,7 +253,34 @@ string correct_read(
     // For each component, calculate the shortest path from the first node to the last node in the component list
     for (const auto& [component_id, vertices_list] : component_vertices) {
         total_components++;
+        
         if (vertices_list.size() == 1) {
+            // cout << lr_name<<"| singleton vertex: "<< vertices_list.front() << " | "<<r_vertex_map[vertices_list.front()] <<endl;
+            string v_id = r_vertex_map[vertices_list.front()];
+            
+            // replace with the single vertex
+            for (const auto& record : chunk) {
+                if (record.id == v_id) {
+                    int l = record.sequence.length();
+
+                    
+                    if(lr_seq.length() < record.end){ //clip the overhang
+                        l -= record.end -lr_seq.length();
+                    }
+                    for(int i = 0;i < l; i ++ ){
+                        if(lr_seq.at(record.start + i) == record.sequence.at(i)){
+                            lr_seq.at(record.start + i) = record.sequence.at(i);
+                        }else{
+                            lr_seq.at(record.start + i) = tolower(record.sequence.at(i));
+
+                        }
+                    }
+
+                    break;
+
+                }
+            }
+            
             continue;  // Skip components with only one vertex
         }
         // Extract the first and last vertices in the component list
@@ -271,9 +302,13 @@ string correct_read(
 
 
         std::vector<string> path;
+        
         //get the id (first column in the alignment file) of each read in path
         for (graph_traits<Graph>::vertex_descriptor v = destination; v != source; v = predecessor[v]) {
             path.push_back(r_vertex_map[v]);  // Push the string ID
+
+            std::pair<Graph::edge_descriptor, bool> edge_info = edge(predecessor[v], v, G);
+            
         }
         path.push_back(r_vertex_map[source]);
         std::vector<Record> subset;
@@ -321,11 +356,15 @@ string correct_read(
         int start = static_cast<size_t>(subset[0].start);
         int s_len = s.length();
         for(int i = 0;i < s_len; i ++ ){
-            lr_seq.at(start + i) = tolower(s.at(i));
+            if(lr_seq.at(start+ i) == tolower(s.at(i)) ){
+                lr_seq.at(start + i) = s.at(i);
+            }else{
+                lr_seq.at(start + i) = tolower(s.at(i));
+            }
         }
 
 
-            if(lr_name == EXAMPLE_LR and verbose){
+        if(lr_name == EXAMPLE_LR and verbose){
                 
 
                 // Output the shortest distance and the path for the current component
@@ -343,20 +382,17 @@ string correct_read(
 
                 cout << "_____________________________\n\n\n" << endl;
                 
-
+                write_graph_to_dot(G,vertex_map, EXAMPLE_LR + ".dot");
                 // cout << "\ts = " << s;
                 // cout << "\n------\n";
-
-
-
             }
         }
     
-    for(int i=0;i<lr_seq.length();i++){
-        if(lr_seq[i] != lr_seq_copy[i]){
-            lr_seq[i] = tolower(lr_seq[i]);
-        }
-    }
+    // for(int i=0;i<lr_seq.length();i++){
+    //     if(lr_seq[i] != lr_seq_copy[i]){
+    //         lr_seq[i] = tolower(lr_seq[i]);
+    //     }
+    // }
 
     return lr_seq; 
 
@@ -375,6 +411,7 @@ void correct_long_reads(
     std::string out_filepath = fasta_filepath.substr(0, dot_pos) + "_corr" + fasta_filepath.substr(dot_pos); 
     std::ofstream corr_reads_fname(out_filepath);
 
+
     if (!corr_reads_fname.is_open()) {
         std::cerr << "Error: Could not open the file " << out_filepath << " for writing." << std::endl;
         return;
@@ -389,8 +426,8 @@ void correct_long_reads(
     std::string line;
     std::string currentPac = "";
     std::vector<Record> currentChunk;
-    int chunk_size = 2500;
-    int mark = 2500;
+    int chunk_size = 25000;
+    int mark = chunk_size;
     int count = 0;
     while (std::getline(file, line)) {
         
@@ -410,7 +447,7 @@ void correct_long_reads(
                 string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq, false);
                 corr_reads_fname << ">" + currentPac << "\n";
                 corr_reads_fname << corrected_read << "\n";
-                corr_reads_fname << LR_MAP.at(currentPac) << "\n";
+                // corr_reads_fname << LR_MAP.at(currentPac) << "\n";
                 
 
             }
@@ -429,8 +466,9 @@ void correct_long_reads(
     if (!currentChunk.empty()) {
         string lr_seq = LR_MAP.at(currentPac);
         auto [G, vertex_map] = init_graph(currentPac, currentChunk, LR_MAP.at(currentPac));
-        string s = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq );
-
+        string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq);
+        corr_reads_fname << ">" + currentPac << "\n";
+        corr_reads_fname << corrected_read << "\n";
     }
 
     file.close();
@@ -506,7 +544,7 @@ int main(int argc, char* argv[]) {
     cout <<"[ "<< __FILE__ <<" ] bad components "<<bad_components<<" | " << 100* (bad_components/total_components)<< "%"<<endl;
     cout <<"[ "<< __FILE__ <<" ] twice aligned short reads "<<twice_aligned_short_reads<<" | " << 100* (twice_aligned_short_reads/total_components)<< "%"<<endl;
 
-
+    cout <<"[ "<< __FILE__ <<" ] "<< most_active_long_read <<" had the most edges in a read graph " << max_edges << endl;
     
     return 0;
 }

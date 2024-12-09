@@ -14,9 +14,9 @@
 
 
 
-awk 'NR <= 50000 {print}' ecoli_data/SRR13921543_1.fastq > ecoli_data/SRR13921543_1_sub.fastq
-awk 'NR <= 50000 {print}' ecoli_data/SRR13921543_2.fastq > ecoli_data/SRR13921543_2_sub.fastq
-awk 'NR <= 10000 {print}' ecoli_data/SRR10971019.fasta > ecoli_data/SRR10971019_sub.fasta
+# awk 'NR <= 50000 {print}' ecoli_data/SRR13921543_1.fastq > ecoli_data/SRR13921543_1_sub.fastq
+# awk 'NR <= 50000 {print}' ecoli_data/SRR13921543_2.fastq > ecoli_data/SRR13921543_2_sub.fastq
+# awk 'NR <= 10000 {print}' ecoli_data/SRR10971019.fasta > ecoli_data/SRR10971019_sub.fasta
 
 
 

@@ -5,18 +5,23 @@
 #           parameters          #
 
 folder = "ecoli_new"
-short_1 = "SRR13921543_1_sub.fastq"
-short_2 = "SRR13921543_2_sub.fastq"
+short_1 = "SRR13921543_1.fastq"
+short_2 = "SRR13921543_2.fastq"
 long =    "SRR10971019_sub.fasta"
 ref =     "NC_000913.fasta"
 
-n_short_reads = 5000
-n_long_reads = 4000
+short_reads_per_chunk = 500
+n_long_reads = 5000
+max_chunks = 1000
 
 #################################
 
-n_short_reads *=4
+short_reads_per_chunk *=4
 n_long_reads *=2
+
+
+og_alignment = f"{folder}/og.sam"
+corr_alignment = f"{folder}/corr.sam"
 
 
 output_file = f"{folder}/results.txt"
@@ -29,54 +34,91 @@ rule all:
 # Rule to process the FASTQ and FASTA files
 rule align_short_to_long:
     output:
-        alignment = f"{folder}/sl_align.sam",
+        raw_alignment = f"{folder}/sl_raw_align.txt",
         long_reads = f"{folder}/lr.fasta"
-    
     shell:
         """
-        awk 'NR <= {n_short_reads} {{print}}' {folder}/{short_1} > {folder}/sr1.fastq
-        awk 'NR <= {n_short_reads} {{print}}' {folder}/{short_2} > {folder}/sr2.fastq
-        awk 'NR <= {n_long_reads} {{print}}'  {folder}/{long}    >  {folder}/lr.fasta 
-
-        python3 chunk_fastq {folder} {short1} {short2}
+        awk 'NR <= {n_long_reads} {{print}}' {folder}/{long} > {folder}/lr.fasta 
         
-
+        # Step 2: Index the long reads FASTA file
         bwa index {folder}/lr.fasta
-        bwa mem -t 4 -aY -A 5 -B 11 -O 2,1 -E 4,3 -k 8 -W 10 -w 40 -r1 -D 0 -y 20 -L 30,30 -T 2.5 {folder}/lr.fasta {folder}/sr1.fastq {folder}/sr2.fastq > {output.alignment}
 
+        # Step 3: Create the chunks for the short reads
+        mkdir -p {folder}/chunks
+        python3 chunk_fastq.py {folder} {short_1} {short_2} {short_reads_per_chunk} {max_chunks}
 
+        # Step 4: Calculate number of chunk files
+        num_files=$(ls -l {folder}/chunks/ | grep -v '^d' | wc -l)
+        num_files=$(((num_files - 1) / 2))
 
-        """
+        # Step 5: Loop through the chunk files and run bwa mem for each pair
+        for ((i=0; i<num_files; i++)); do
+            # Reference the chunk files using $i
+            s1="{folder}/chunks/{short_1}_$i.fastq"
+            s2="{folder}/chunks/{short_2}_$i.fastq"
+            
+            echo "Processing: $s1, $s2"
+            
+            # Run bwa mem for each chunk of short reads
+            bwa mem -v 1 -t 8 -aY -A 5 -B 11 -O 2,1 -E 4,3 -k 8 -W 10 -w 40 -r1 -D 0 -y 20 -L 30,30 -T 2.5 \
+            {folder}/lr.fasta "$s1" "$s2" |
+            grep -v "^@" | 
+            awk '{{print $1 "." NR%2, $3, $4, $4 + length($10), $10}}' |
+            awk '$5 != "*" {{print}}' >> {output.raw_alignment} 
 
+        done
 
-rule format_short_long_alignment:
-    input:
-        alignment = f"{folder}/sl_align.sam"
-    output:
-        raw_alignment = f"{folder}/sl_raw_align.txt"
-    shell:
-        """
-
-        grep -v "^@" {input.alignment} | #remove filter for non header lines from the same file
-        awk '{{print $1 "." NR%2, $3, $4, $4 + length($10), $10}}' |
-        sort -k2,2 -k3,3 -k4,4 | awk '$5 != "*" {{print}}' > {output.raw_alignment}
         
+        sort -k2,2 -k3,3 -k4,4 {output.raw_alignment} -o {output.raw_alignment}
         """
+
+
+
+# rule format_short_long_alignment:
+#     input:
+#         alignment = f"{folder}/sl_align.sam"
+#     output:
+#         raw_alignment = f"{folder}/sl_raw_align.txt"
+#     shell:
+#         """
+
+#         grep -v "^@" {input.alignment} | #remove filter for non header lines from the same file
+#         awk '{{print $1 "." NR%2, $3, $4, $4 + length($10), $10}}' |
+#         sort -k2,2 -k3,3 -k4,4' > {output.raw_alignment}
+        
+#         """
 
 rule correct_long_reads:
     input:
         raw_alignment = f"{folder}/sl_raw_align.txt",
         long_reads = f"{folder}/lr.fasta"
         
+
     output:
         output_file
     shell:
         """
     
-        # g++ colormap.cpp -o colormap
+        g++ colormap.cpp -o colormap
         ./colormap {input.long_reads} {input.raw_alignment}
-        echo "placeholder" > {output_file}
+        dot -Tpng graph.dot -o graph.png
+        echo -e "og" > {output_file}
+
+
+
         """
-    
 
 
+
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        # echo -e "og" > {output.og_alignment}
+        # echo -e "corr" > {output.corr_alignment}

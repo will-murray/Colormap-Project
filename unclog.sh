@@ -13,3 +13,6 @@ rm "$1"/sl_raw_align.txt
 rm "$1"/sr1_corr.fastq
 rm "$1"/sr1.fastq
 rm "$1"/sr2.fastq
+rm "$1"/signal.txt
+
+rm -r "$1"/chunks
