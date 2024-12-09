@@ -1,8 +1,4 @@
 .vscode/
 .snakemake/
-
-blasr/og.sam
-
-ecoli_new/
-
-
+ecoli/
+colormap

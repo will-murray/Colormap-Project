@@ -26,10 +26,12 @@ using std::endl;
 using std::string;
 
 const string EXAMPLE_LR = "SRR10971019.1";
-const int MINOVERLAP = 5;
+const int MINOVERLAP = 10;
 double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
+
+bool correct_singletons;
 
 int max_edges = 0;
 string most_active_long_read;
@@ -213,7 +215,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     if(edge_count > max_edges){
         // cout <<"new champ: " << lr_name<<endl;
         most_active_long_read = lr_name;
-        write_graph_to_dot(G ,vertex_map,"graph.dot");
+        write_graph_to_dot(G ,vertex_map,"imgs/graph.dot");
         max_edges= edge_count;
     }
 
@@ -258,27 +260,31 @@ string correct_read(
             // cout << lr_name<<"| singleton vertex: "<< vertices_list.front() << " | "<<r_vertex_map[vertices_list.front()] <<endl;
             string v_id = r_vertex_map[vertices_list.front()];
             
-            // replace with the single vertex
-            for (const auto& record : chunk) {
-                if (record.id == v_id) {
-                    int l = record.sequence.length();
+            if(correct_singletons){
 
-                    
-                    if(lr_seq.length() < record.end){ //clip the overhang
-                        l -= record.end -lr_seq.length();
-                    }
-                    for(int i = 0;i < l; i ++ ){
-                        if(lr_seq.at(record.start + i) == record.sequence.at(i)){
-                            lr_seq.at(record.start + i) = record.sequence.at(i);
-                        }else{
-                            lr_seq.at(record.start + i) = tolower(record.sequence.at(i));
+                    // replace the long read chunk with the sequence from the isolated vertex
+                    for (const auto& record : chunk) {
+                        if (record.id == v_id) {
+                            int l = record.sequence.length();
+
+                            
+                            if(lr_seq.length() < record.end){ //clip the overhang
+                                l -= record.end -lr_seq.length();
+                            }
+                            for(int i = 0;i < l; i ++ ){
+                                if(lr_seq.at(record.start + i) == record.sequence.at(i)){
+                                    lr_seq.at(record.start + i) = record.sequence.at(i);
+                                }else{
+                                    lr_seq.at(record.start + i) = tolower(record.sequence.at(i));
+
+                                }
+                            }
+
+                            break;
 
                         }
                     }
-
-                    break;
-
-                }
+                    
             }
             
             continue;  // Skip components with only one vertex
@@ -529,10 +535,15 @@ std::unordered_map<std::string, std::string> parseFasta(const std::string& filep
 int main(int argc, char* argv[]) {
 
     
-    if( argc != 3 ){
-        cout << "Usage: ./build_graph <long_reads>.fasta <sl_raw_align.txt>"<< endl;
+    if( argc != 4 ){
+        cout << "Usage: ./build_graph <long_reads>.fasta <sl_raw_align.txt> correct_singletons?"<< endl;
         exit(1);
     }
+
+    if(argv[3] == "no"){
+        correct_singletons = false;
+    }
+    
     cout <<"[ "<< __FILE__ <<" ] Preprocessing" << endl;
     std::unordered_map<std::string, std::string> LR_MAP = parseFasta(argv[1]);
 

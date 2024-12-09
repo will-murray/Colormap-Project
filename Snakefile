@@ -3,15 +3,20 @@
 # Output file
 
 #           parameters          #
+# awk '/^>/ {if (seq) print length(seq); seq=""; header=$0} !/^>/ {seq=seq$0} END {if (seq) print length(seq)}' pac_corr.fasta | awk 'NR==FNR {len[NR]=$1; next} /^>/ {print $0 "_length=" len[++count]} !/^>/ {print}' - pac_corr.fasta > output.fasta
+#add this to the pipeline
 
-folder = "ecoli_new"
+
+folder = "ecoli"
 short_1 = "SRR13921543_1.fastq"
 short_2 = "SRR13921543_2.fastq"
 long =    "SRR10971019_sub.fasta"
-ref =     "NC_000913.fasta"
 
-short_reads_per_chunk = 500
-n_long_reads = 5000
+
+test_name = "nsc" #no singleton corrections
+correct_singletons = "no"
+short_reads_per_chunk = 5000
+n_long_reads = 50000
 max_chunks = 1000
 
 #################################
@@ -22,7 +27,6 @@ n_long_reads *=2
 
 og_alignment = f"{folder}/og.sam"
 corr_alignment = f"{folder}/corr.sam"
-
 
 output_file = f"{folder}/results.txt"
 
@@ -100,9 +104,16 @@ rule correct_long_reads:
         """
     
         g++ colormap.cpp -o colormap
-        ./colormap {input.long_reads} {input.raw_alignment}
-        dot -Tpng graph.dot -o graph.png
-        echo -e "og" > {output_file}
+        ./colormap {input.long_reads} {input.raw_alignment} {correct_singletons}
+
+        #add the length of each long read to the corrected long reads file
+        awk '/^>/ {{if (seq) print length(seq); seq=""; header=$0}} !/^>/ {{seq=seq$0}} END {{if (seq) print length(seq)}}' {folder}/lr_corr.fasta |
+        awk 'NR==FNR {{len[NR]=$1; next}} /^>/ {{print $0 " length=" len[++count]}} !/^>/ {{print}}' - {folder}/lr_corr.fasta > {folder}/tmp.fasta && mv {folder}/tmp.fasta {folder}/lr_corr.fasta
+
+        cp {folder}/lr_corr.fasta {folder}/lr_corr_{test_name}.fasta 
+        rm {folder}/lr_corr.fasta
+
+        echo -e "finished {test_name}" > {output_file}
 
 
 
