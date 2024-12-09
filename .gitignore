@@ -1,4 +1,10 @@
 .vscode/
 .snakemake/
-ecoli/
+.Rhistory
 colormap
+
+
+# Ignore everything in the ecoli folder except for init_ecoli.sh
+ecoli/*
+
+!ecoli/init_ecoli.sh

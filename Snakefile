@@ -1,26 +1,22 @@
-# Snakefile to process input files and generate results.txt
-
-# Output file
-
-#           parameters          #
-# awk '/^>/ {if (seq) print length(seq); seq=""; header=$0} !/^>/ {seq=seq$0} END {if (seq) print length(seq)}' pac_corr.fasta | awk 'NR==FNR {len[NR]=$1; next} /^>/ {print $0 "_length=" len[++count]} !/^>/ {print}' - pac_corr.fasta > output.fasta
-#add this to the pipeline
-
 
 folder = "ecoli"
-short_1 = "SRR13921543_1.fastq"
-short_2 = "SRR13921543_2.fastq"
+short_1 = "SRR13921546_1.fastq"
+short_2 = "SRR13921546_2.fastq"
 long =    "SRR10971019_sub.fasta"
 
 
 test_name = "nsc" #no singleton corrections
 correct_singletons = "no"
-short_reads_per_chunk = 5000
-n_long_reads = 50000
-max_chunks = 1000
+
+
+short_reads_per_chunk = 20000
+n_long_reads = 1000
+max_chunks = 5
+
+
 
 #################################
-
+test_name = f"_{test_name}"
 short_reads_per_chunk *=4
 n_long_reads *=2
 
@@ -102,7 +98,7 @@ rule correct_long_reads:
         output_file
     shell:
         """
-    
+
         g++ colormap.cpp -o colormap
         ./colormap {input.long_reads} {input.raw_alignment} {correct_singletons}
 
@@ -110,7 +106,7 @@ rule correct_long_reads:
         awk '/^>/ {{if (seq) print length(seq); seq=""; header=$0}} !/^>/ {{seq=seq$0}} END {{if (seq) print length(seq)}}' {folder}/lr_corr.fasta |
         awk 'NR==FNR {{len[NR]=$1; next}} /^>/ {{print $0 " length=" len[++count]}} !/^>/ {{print}}' - {folder}/lr_corr.fasta > {folder}/tmp.fasta && mv {folder}/tmp.fasta {folder}/lr_corr.fasta
 
-        cp {folder}/lr_corr.fasta {folder}/lr_corr_{test_name}.fasta 
+        cp {folder}/lr_corr.fasta {folder}/lr_corr{test_name}.fasta 
         rm {folder}/lr_corr.fasta
 
         echo -e "finished {test_name}" > {output_file}

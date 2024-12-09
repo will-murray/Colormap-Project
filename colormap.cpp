@@ -27,7 +27,6 @@ using std::string;
 
 const string EXAMPLE_LR = "SRR10971019.1";
 const int MINOVERLAP = 10;
-double bad_components = 0; //number of components where the shortest path was computed with a start position after the end position
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
 
@@ -257,7 +256,6 @@ string correct_read(
         total_components++;
         
         if (vertices_list.size() == 1) {
-            // cout << lr_name<<"| singleton vertex: "<< vertices_list.front() << " | "<<r_vertex_map[vertices_list.front()] <<endl;
             string v_id = r_vertex_map[vertices_list.front()];
             
             if(correct_singletons){
@@ -302,7 +300,8 @@ string correct_read(
             G,
             source,
             distance_map(
-                make_iterator_property_map(distance.begin(), get(vertex_index, G))).predecessor_map(make_iterator_property_map(predecessor.begin(), get(vertex_index, G))
+                make_iterator_property_map(
+                    distance.begin(), get(vertex_index, G))).predecessor_map(make_iterator_property_map(predecessor.begin(), get(vertex_index, G))
                 )
             );
 
@@ -317,8 +316,8 @@ string correct_read(
             
         }
         path.push_back(r_vertex_map[source]);
-        std::vector<Record> subset;
 
+        std::vector<Record> subset;
         //get the node data from the path
         for (auto it = path.rbegin(); it != path.rend(); ++it) {
             for (const auto& record : chunk) {
@@ -327,6 +326,10 @@ string correct_read(
                 }
             }
         }
+        
+        //sort the data so that the short read mapped to the leftmost position of lr_seq is first
+        std::sort(subset.begin(), subset.end(), [](const Record& a, const Record& b) {return a.start < b.start;});
+
         
         //stop if a short read in the path 
         if(subset.size() != path.size()){
@@ -341,22 +344,10 @@ string correct_read(
 
         int l = subset.size();
         string s = subset[0].sequence;
-        bool bad_component = false;
+
         for(int i = 0; i < l - 1; i++){
             int offset = subset[i].end - subset[i+1].start;
-            if(offset >= subset[i].sequence.length()){
-                /*
-                uncanny
-                id =ill.2608.0 | start = 1006 | end =1106 | seq =  CTGACGTTCACGCTTACGTCCACACGGCATTCGGCAGATATTCCGCCGTATACGTTTGCCAGCGATGTGCAGGTTATGGTGATTAAGAAACAGGCGCTGG
-                id =ill.3615.0 | start = 969 | end =1069 | seq =  TATTGTTGACATGCCAGCGGGTCGGGGAAACGTGATCCTGACGTTCACGCTTACGTCCACACGGCATTCGGCAGATATTCCGCCGTATACGTTTGCCAGC
-                */
-                bad_component = true;
-                bad_components ++;
-                s = "bad";
-                break;
-            }
             s += subset[i+1].sequence.substr(offset);
-    
         }
 
         int start = static_cast<size_t>(subset[0].start);

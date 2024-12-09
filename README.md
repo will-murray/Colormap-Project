@@ -7,7 +7,7 @@ The goal of this project is to re implement the methodology presented in the pap
 - Entrez Direct: used for downloading reference sequence NC 000913  
     ```apt install ncbi-entrez-direct```
 
-- BWA - see here for installation : https://github.com/lh3/bwa. This code base expects it to be in ```$PATH```  
+- BWA - see here for installation : https://github.com/lh3/bwa. This code expects BWA to be in ```$PATH```  
 
 - zlib.h  
 ```apt-get install zlib1g-dev```
@@ -23,7 +23,15 @@ The goal of this project is to re implement the methodology presented in the pap
 
 # Usage
 
-## Snakemake pipeline
+## Ecoli Data Initialization
+
+To download the Illumina short reads, PacBio long reads and reference genome for the Escherichia coli str. K-12 substr. MG1655
+do the following:  
+```cd ecoli```  
+```bash init_ecoli.sh```
+
+
+## ```Snakemake```
 
 #### Input:
 The main 4 parameter for ```Snakefile``` are 
