@@ -1,6 +1,9 @@
 /*
 
-    this code was written in ~72 hours, so I apologize for its sloppyness
+   TODO: make this code not a sloppy mess
+        - learn how to use boost/graph library properly
+        - get rid of the the vertex_map 
+        - note to self: next time you use build a data structure with b do it right the first time
 
 */
 
@@ -25,10 +28,13 @@ using std::cout;
 using std::endl;
 using std::string;
 
-const string EXAMPLE_LR = "SRR10971019.1";
+const string EXAMPLE_LR = "pac_268";
 const int MINOVERLAP = 10;
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
+
+std::vector<std::tuple<string,int,int>> component_sizes;
+
 
 bool correct_singletons;
 
@@ -258,6 +264,7 @@ string correct_read(
         if (vertices_list.size() == 1) {
             string v_id = r_vertex_map[vertices_list.front()];
             
+            component_sizes.push_back(std::make_tuple(lr_name,1,0));
             if(correct_singletons){
 
                     // replace the long read chunk with the sequence from the isolated vertex
@@ -287,6 +294,9 @@ string correct_read(
             
             continue;  // Skip components with only one vertex
         }
+
+        
+        component_sizes.push_back(std::make_tuple(lr_name,vertices_list.size(),-1));
         // Extract the first and last vertices in the component list
         Vertex source = vertices_list.front();
         Vertex destination = vertices_list.back();
@@ -440,8 +450,8 @@ void correct_long_reads(
         if (record.pac != currentPac) {
             if (!currentChunk.empty()) {
                 string lr_seq = LR_MAP.at(currentPac);
-                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq, false);
-                string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq, false);
+                auto [G, vertex_map] = init_graph(currentPac, currentChunk, lr_seq, true);
+                string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq);
                 corr_reads_fname << ">" + currentPac << "\n";
                 corr_reads_fname << corrected_read << "\n";
                 // corr_reads_fname << LR_MAP.at(currentPac) << "\n";
@@ -462,13 +472,22 @@ void correct_long_reads(
 
     if (!currentChunk.empty()) {
         string lr_seq = LR_MAP.at(currentPac);
-        auto [G, vertex_map] = init_graph(currentPac, currentChunk, LR_MAP.at(currentPac));
+        auto [G, vertex_map] = init_graph(currentPac, currentChunk, LR_MAP.at(currentPac) ,true);
         string corrected_read = correct_read(G,vertex_map, currentChunk, currentPac,lr_seq);
         corr_reads_fname << ">" + currentPac << "\n";
         corr_reads_fname << corrected_read << "\n";
     }
 
     file.close();
+    corr_reads_fname.close();
+     cout <<"[ "<< __FILE__ <<" ] writing graph file to graph_db/ " <<endl;
+    std::ofstream graph_file("graph_db/g.txt");
+    for(auto tup: component_sizes){
+        auto [l,v,e] = tup;
+        graph_file << l << "\t" << v << "\t" << e <<endl;
+    }
+
+    graph_file.close();
 }
 
 
@@ -533,6 +552,8 @@ int main(int argc, char* argv[]) {
 
     if(argv[3] == "no"){
         correct_singletons = false;
+    }else{
+        correct_singletons = true;
     }
     
     cout <<"[ "<< __FILE__ <<" ] Preprocessing" << endl;
@@ -543,12 +564,13 @@ int main(int argc, char* argv[]) {
     correct_long_reads(argv[2],argv[1], LR_MAP);
 
     cout <<"[ "<< __FILE__ <<" ] total components " <<total_components <<endl;
-    cout <<"[ "<< __FILE__ <<" ] bad components "<<bad_components<<" | " << 100* (bad_components/total_components)<< "%"<<endl;
     cout <<"[ "<< __FILE__ <<" ] twice aligned short reads "<<twice_aligned_short_reads<<" | " << 100* (twice_aligned_short_reads/total_components)<< "%"<<endl;
 
     cout <<"[ "<< __FILE__ <<" ] "<< most_active_long_read <<" had the most edges in a read graph " << max_edges << endl;
     
     return 0;
+
+
 }
 
 // ./build_graphs ecoli_data/SRR10971019_sub.fasta ecoli_data/sl_raw_align.txt

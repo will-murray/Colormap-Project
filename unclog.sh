@@ -10,9 +10,8 @@ rm "$1"/raw_align.txt
 rm "$1"/results.txt
 rm "$1"/sl_align.sam
 rm "$1"/sl_raw_align.txt
-rm "$1"/sr1_corr.fastq
-rm "$1"/sr1.fastq
-rm "$1"/sr2.fastq
-rm "$1"/signal.txt
+rm "$1"/corr.bam
+rm "$1"/og.bam
+rm "$1"/lr_filt.fasta
 
 rm -r "$1"/chunks

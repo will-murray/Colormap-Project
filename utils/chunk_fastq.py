@@ -1,11 +1,14 @@
 import sys
-import os
+
+
 
 folder = sys.argv[1]
 fastq_file_1 = sys.argv[2]
 fastq_file_2 = sys.argv[3]
 chunk_size = int(sys.argv[4])  
 MAX_CHUNKS = int(sys.argv[5])
+
+
 
 def write_fastq_to_chunk_folder(fastq_filename):
     lines_in_chunk = 0
