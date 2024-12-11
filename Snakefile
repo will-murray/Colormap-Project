@@ -16,9 +16,9 @@ correct_singletons = "no"
 deg = 1
 
 
-short_reads_per_chunk = 10
-n_long_reads = 10
-max_chunks = 2
+short_reads_per_chunk = 100000
+n_long_reads = 5000
+max_chunks = 10
 
 
 
@@ -34,7 +34,6 @@ n_long_reads *=2
 
 og_alignment = f"{folder}/og.sam"
 corr_alignment = f"{folder}/corr.sam"
-
 output_file = f"{folder}/results.txt"
 
 
@@ -130,16 +129,21 @@ rule align_to_reference:
 
     shell:
         """
-            python3 utils/filt.py {input.long_reads_corr} {input.long_reads}
-            blasr --header --bestn 1 {folder}/lr_filt.fasta {folder}/{ref} > {folder}/og.bam
+            # If colormap.cpp didnt correct any base pairs in a long read L then L wont be written to input.long_reads_corr,
+            # this script add these missing (unchanged) reads
+            # this is done to make the testing consistent
+            python3 utils/add_missing_lr.py {input.long_reads} {input.long_reads_corr}
+
+            blasr --header --bestn 1 {input.long_reads} {folder}/{ref} > {folder}/og.bam
             blasr --header --bestn 1 {input.long_reads_corr} {folder}/{ref} > {folder}/corr.bam
 
-        
+            
+            echo -e "short reads per chunk: {short_reads_per_chunk}"
+            echo -e "num chunks: {max_chunks}"
+            echo -e "number of long reads corrected: {n_long_reads}"
 
-            python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} > {output_file}
+            python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} >> {output_file}
             python3 utils/analyze_out.py {folder}/corr.bam  {input.long_reads_corr} >> {output_file}
-
-            echo -e "finished {test_name}" > {output_file}
 
 
             

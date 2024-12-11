@@ -480,14 +480,7 @@ void correct_long_reads(
 
     file.close();
     corr_reads_fname.close();
-     cout <<"[ "<< __FILE__ <<" ] writing graph file to graph_db/ " <<endl;
-    std::ofstream graph_file("graph_db/g.txt");
-    for(auto tup: component_sizes){
-        auto [l,v,e] = tup;
-        graph_file << l << "\t" << v << "\t" << e <<endl;
-    }
-
-    graph_file.close();
+    
 }
 
 
