@@ -171,7 +171,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     }
 
 
-    for(auto& i: chunk){
+    for(auto& idx: chunk){
         for(auto& j: chunk){
             if( (i.id != j.id) && (i.start <= j.start && i.end < j.end) && (j.start <= i.end - MINOVERLAP + 1 ) && (j.end <= lr_len) ){
                 std::vector<int> I = {j.start, i.end};
@@ -216,6 +216,7 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
                 
             }
         }
+
     }
     if(edge_count > max_edges){
         // cout <<"new champ: " << lr_name<<endl;

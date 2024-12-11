@@ -12,7 +12,7 @@ ref = "ref.fasta"
 
 
 test_name = "1" #no singleton corrections
-correct_singletons = "no"
+correct_singletons = "yes"
 deg = 1
 
 
@@ -132,17 +132,18 @@ rule align_to_reference:
             # If colormap.cpp didnt correct any base pairs in a long read L then L wont be written to input.long_reads_corr,
             # this script add these missing (unchanged) reads
             # this is done to make the testing consistent
+
             python3 utils/add_missing_lr.py {input.long_reads} {input.long_reads_corr}
 
-            blasr --header --bestn 1 {input.long_reads} {folder}/{ref} > {folder}/og.bam
+            # blasr --header --bestn 1 {input.long_reads} {folder}/{ref} > {folder}/og.bam
             blasr --header --bestn 1 {input.long_reads_corr} {folder}/{ref} > {folder}/corr.bam
 
             
-            echo -e "short reads per chunk: {short_reads_per_chunk}"
-            echo -e "num chunks: {max_chunks}"
-            echo -e "number of long reads corrected: {n_long_reads}"
+            echo -e "short reads per chunk: {short_reads_per_chunk}" >> {output_file}
+            echo -e "num chunks: {max_chunks}">> {output_file}
+            echo -e "number of long reads corrected: {n_long_reads}">> {output_file}
 
-            python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} >> {output_file}
+            # python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} >> {output_file}
             python3 utils/analyze_out.py {folder}/corr.bam  {input.long_reads_corr} >> {output_file}
 
 
