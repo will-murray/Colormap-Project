@@ -58,18 +58,18 @@ rule align_short_to_long:
         #     rm {folder}/lr_deg.fasta
         # fi
         
-        # Step 2: Index the long reads FASTA file
+        #Index the long reads FASTA file
         bwa index {folder}/lr.fasta
 
-        # Step 3: Create the chunks for the short reads
+        #Create the chunks for the short reads
         mkdir -p {folder}/chunks
         python3 utils/chunk_fastq.py {folder} {short_1} {short_2} {short_reads_per_chunk} {max_chunks}
 
-        # Step 4: Calculate number of chunk files
+        #Calculate number of chunk files
         num_files=$(ls -l {folder}/chunks/ | grep -v '^d' | wc -l)
         num_files=$(((num_files - 1) / 2))
 
-        # Step 5: Loop through the chunk files and run bwa mem for each pair
+        #Loop through the chunk files and run bwa mem for each pair
         for ((i=0; i<num_files; i++)); do
             # Reference the chunk files using $i
             s1="{folder}/chunks/{short_1}_$i.fastq"
