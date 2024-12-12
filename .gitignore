@@ -4,7 +4,14 @@
 colormap
 
 
-# Ignore everything in the ecoli folder except for init_ecoli.sh
-ecoli/*
 
+test_data/*
+!test_data/ill_1.fastq
+!test_data/ill_2.fastq
+!test_data/pac.fasta
+
+ecoli/*
 !ecoli/init_ecoli.sh
+
+yeast/*
+!ecoli/init_yeast.sh

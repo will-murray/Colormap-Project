@@ -1,24 +1,30 @@
 
-folder = "ecoli"
-short_1 = "SRR13921546_1.fastq"
-short_2 = "SRR13921546_2.fastq"
-long = "SRR10971019.fasta"
-ref = "ref.fasta"
+# folder = "ecoli"
+# short_1 = "SRR13921546_1.fastq"
+# short_2 = "SRR13921546_2.fastq"
+# long = "SRR10971019.fasta"
+# ref = "ref.fasta"
 
 # folder = "test_data"
 # short_1 = "ill_1.fastq"
 # short_2 = "ill_2.fastq"
 # long = "pac.fasta"
+# ref = None
 
+folder = "yeast"
+short_1 = "ERR10616375_1.fastq"
+short_2 = "ERR10616375_2.fastq"
+long = "SRR18210286.fasta"
+ref = "ref.fasta"
 
 test_name = "1" #no singleton corrections
-correct_singletons = "yes"
+correct_singletons = "no"
 deg = 1
 
 
-short_reads_per_chunk = 100000
-n_long_reads = 5000
-max_chunks = 10
+short_reads_per_chunk = 10000
+n_long_reads = 1000
+max_chunks = 5
 
 
 
@@ -50,12 +56,7 @@ rule align_short_to_long:
         """
         awk 'NR <= {n_long_reads} {{print}}' {folder}/{long} > {folder}/lr.fasta 
 
-        # if [ {deg} -eq 1 ]; then
-        #     echo "simulating errors in the long reads"
-        #     python3 degrade.py {folder}/lr.fasta
-        #     cp {folder}/lr_deg.fasta {folder}/lr.fasta
-        #     rm {folder}/lr_deg.fasta
-        # fi
+
         
         #Index the long reads FASTA file
         bwa index {folder}/lr.fasta
@@ -87,7 +88,7 @@ rule align_short_to_long:
         done
 
         
-        sort -k2,2 -k3,3 -k4,4 {output.raw_alignment} -o {output.raw_alignment}
+        sort -k2,2 -k3,3n -k4,4n {output.raw_alignment} -o {output.raw_alignment}
         """
 
 
@@ -102,8 +103,8 @@ rule correct_long_reads:
     shell:
         """
 
-        g++ colormap.cpp -o colormap
-        ./colormap {input.long_reads} {input.raw_alignment} {correct_singletons}
+        g++ fast_colormap.cpp -o fast_colormap
+        ./fast_colormap {input.long_reads} {input.raw_alignment} {correct_singletons}
 
         #add the length of each long read to the corrected long reads file
         awk '/^>/ {{if (seq) print length(seq); seq=""; header=$0}} !/^>/ {{seq=seq$0}} END {{if (seq) print length(seq)}}' {folder}/lr_corr.fasta |
@@ -129,21 +130,26 @@ rule align_to_reference:
 
     shell:
         """
+            if [ "{folder}" -eq "test_data" ]; then
+                echo "No reference genome for this data; no report produced" >> {output_file}
+                exit 1
+            fi
             # If colormap.cpp didnt correct any base pairs in a long read L then L wont be written to input.long_reads_corr,
             # this script add these missing (unchanged) reads
             # this is done to make the testing consistent
 
             python3 utils/add_missing_lr.py {input.long_reads} {input.long_reads_corr}
 
-            # blasr --header --bestn 1 {input.long_reads} {folder}/{ref} > {folder}/og.bam
+            blasr --header --bestn 1 {input.long_reads} {folder}/{ref} > {folder}/og.bam
             blasr --header --bestn 1 {input.long_reads_corr} {folder}/{ref} > {folder}/corr.bam
 
             
             echo -e "short reads per chunk: {short_reads_per_chunk}" >> {output_file}
             echo -e "num chunks: {max_chunks}">> {output_file}
             echo -e "number of long reads corrected: {n_long_reads}">> {output_file}
+            echo -e "correct singletons?: {correct_singletons}">> {output_file}
 
-            # python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} >> {output_file}
+            python3 utils/analyze_out.py {folder}/og.bam    {input.long_reads} >> {output_file}
             python3 utils/analyze_out.py {folder}/corr.bam  {input.long_reads_corr} >> {output_file}
 
 

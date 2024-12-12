@@ -29,7 +29,7 @@ using std::endl;
 using std::string;
 
 const string EXAMPLE_LR = "?";
-const int MINOVERLAP = 10;
+const int MINOVERLAP = 5;
 double twice_aligned_short_reads = 0; //number of times a short read was aligned in more than one position to a single long read
 double total_components = 0; //number of times a short read was aligned in more than one position to a single long read
 
@@ -147,6 +147,7 @@ void write_graph_to_dot(const Graph& G, const std::map<std::string, graph_traits
 
 
 
+
 // Function to process a chunk of records for a given long read and produce a graph object, and a dictionary to map the vertex name to an id
 std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > init_graph(
 
@@ -171,8 +172,13 @@ std::tuple<Graph, std::map<string, graph_traits<Graph>::vertex_descriptor> > ini
     }
 
 
-    for(auto& i: chunk){
-        for(auto& j: chunk){
+    for(int idx_i = 0;idx_i < chunk.size(); idx_i++){
+        Record i = chunk[idx_i];
+        for(int idx_j = idx_i + 1; idx_j < chunk.size(); idx_j++){
+            Record j = chunk[idx_j];
+            if(i.end < j.start){
+                break;
+            }
             if( (i.id != j.id) && (i.start <= j.start && i.end < j.end) && (j.start <= i.end - MINOVERLAP + 1 ) && (j.end <= lr_len) ){
                 std::vector<int> I = {j.start, i.end};
                 std::vector<int> A = {I[0] - i.start, I[1] - I[0]}; // overlapping interval relative to i
